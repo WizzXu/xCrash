@@ -146,6 +146,7 @@ typedef struct
 {
     xcd_dwarf_loc_rule_t cfa_rule;
     xcd_dwarf_loc_rule_t reg_rules[XCD_DWARF_REG_NUM];
+    int aarch64_ra_sign_state; // 0: unsigned (default), 1: signed
 } xcd_dwarf_loc_t;
 
 //location stack
@@ -208,7 +209,11 @@ static xcd_dwarf_cfa_t xcd_dwarf_cfa_table[64] = {
     /* 0x2a */ {1, {DW_EH_PE_omit,    DW_EH_PE_omit}},
     /* 0x2b */ {1, {DW_EH_PE_omit,    DW_EH_PE_omit}},
     /* 0x2c */ {1, {DW_EH_PE_omit,    DW_EH_PE_omit}},
-    /* 0x2d */ {1, {DW_EH_PE_omit,    DW_EH_PE_omit}},
+#if defined(__aarch64__)
+        /* 0x2d */ {0, {DW_EH_PE_omit,    DW_EH_PE_omit}},
+#else
+        /* 0x2d */ {1, {DW_EH_PE_omit,    DW_EH_PE_omit}},
+#endif
     /* 0x2e */ {0, {DW_EH_PE_uleb128, DW_EH_PE_omit}},
     /* 0x2f */ {0, {DW_EH_PE_uleb128, DW_EH_PE_uleb128}},
     /* 0x30 */ {1, {DW_EH_PE_omit,    DW_EH_PE_omit}},
@@ -1181,6 +1186,8 @@ static xcd_dwarf_loc_t *xcd_dwarf_get_loc(xcd_dwarf_t *self, xcd_dwarf_fde_t *fd
                 loc->reg_rules[operands[0]].values[0] = operands[1]; //expression length
                 loc->reg_rules[operands[0]].values[1] = self->memory_cur_offset; //expression end
                 break;
+            case 0x2d: // DW_CFA_AARCH64_negate_ra_state
+                loc->aarch64_ra_sign_state ^= 1;
             case 0x2e: //DW_CFA_GNU_args_size
                 break;
             case 0x2f: //DW_CFA_GNU_negative_offset_extended
@@ -1583,7 +1590,7 @@ static int xcd_dwarf_eval(xcd_dwarf_t *self, xcd_dwarf_fde_t *fde, xcd_dwarf_loc
     }
 
     //step PC and SP
-    xcd_regs_set_pc(regs, return_address_undefined ? 0 : regs->r[fde->cie->return_address_register]);
+    xcd_regs_set_pc(regs, return_address_undefined ? 0 : regs->r[fde->cie->return_address_register], loc->aarch64_ra_sign_state);
     xcd_regs_set_sp(regs, cfa);
     
     //if the pc was set to zero, consider this the final frame

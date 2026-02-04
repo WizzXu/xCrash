@@ -105,6 +105,14 @@ static xcd_regs_label_t xcd_regs_labels[] =
     {XCD_REGS_PC,  "pc"}
 };
 
+static uintptr_t xcd_strip_pac(uintptr_t pc) {
+    register uint64_t ptr __asm__("x30") = (uint64_t)pc;
+
+    __asm__ __volatile__("hint #7" : "+r"(ptr));
+
+    return (uintptr_t)ptr;
+}
+
 void xcd_regs_get_labels(xcd_regs_label_t **labels, size_t *labels_count)
 {
     *labels = xcd_regs_labels;
@@ -116,9 +124,17 @@ uintptr_t xcd_regs_get_pc(xcd_regs_t *self)
     return self->r[XCD_REGS_PC];
 }
 
-void xcd_regs_set_pc(xcd_regs_t *self, uintptr_t pc)
+void xcd_regs_set_pc(xcd_regs_t *self, uintptr_t pc, int ra_sign_state)
 {
-    self->r[XCD_REGS_PC] = pc;
+    if (ra_sign_state)
+    {
+        self->r[XCD_REGS_PC] = xcd_strip_pac(pc);
+    }
+    else
+    {
+        self->r[XCD_REGS_PC] = pc;
+    }
+
 }
 
 uintptr_t xcd_regs_get_sp(xcd_regs_t *self)

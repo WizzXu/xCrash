@@ -78,7 +78,7 @@ uintptr_t xcd_regs_get_pc(xcd_regs_t *self)
     return self->r[XCD_REGS_PC];
 }
 
-void xcd_regs_set_pc(xcd_regs_t *self, uintptr_t pc)
+void xcd_regs_set_pc(xcd_regs_t *self, uintptr_t pc, int ra_sign_state)
 {
     self->r[XCD_REGS_PC] = pc;
 }
