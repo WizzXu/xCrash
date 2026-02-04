@@ -7,7 +7,15 @@ cmake_minimum_required(VERSION 3.4.1)
 add_compile_options(
         -std=c11
         -Weverything
-        -Werror)
+        -Werror
+        -Wno-unsafe-buffer-usage
+        -Wno-declaration-after-statement
+        -Wno-implicit-int-float-conversion
+        -Wno-reserved-identifier
+        -Wno-switch-default
+        -Wno-strict-prototypes
+        -Wno-implicit-fallthrough
+        -Wno-unused-but-set-variable)
 
 #######################################
 # libxcrash.so
@@ -54,6 +62,7 @@ set_target_properties(xcrash PROPERTIES
         -O3 \
         -flto \
         -Wl,--exclude-libs,ALL \
+        -Wl,-z,max-page-size=16384 \
         -Wl,--gc-sections \
         -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/xcrash.exports")
 
@@ -136,6 +145,7 @@ set_target_properties(xcrash_dumper PROPERTIES
         -O3 \
         -flto \
         -Wl,--exclude-libs,ALL \
+        -Wl,-z,max-page-size=16384 \
         -Wl,--gc-sections")
 
 endif()
