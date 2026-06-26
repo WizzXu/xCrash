@@ -82,7 +82,8 @@ class NativeHandler {
                    boolean anrDumpFds,
                    boolean anrDumpNetworkInfo,
                    ICrashCallback anrCallback,
-                   ICrashCallback anrFastCallback) {
+                   ICrashCallback anrFastCallback,
+                   boolean anrUseHookMode) {
         //load lib
         if (libLoader == null) {
             try {
@@ -141,7 +142,8 @@ class NativeHandler {
                 anrLogcatEventsLines,
                 anrLogcatMainLines,
                 anrDumpFds,
-                anrDumpNetworkInfo);
+                anrDumpNetworkInfo,
+                anrUseHookMode);
             if (r != 0) {
                 XCrash.getLogger().e(Util.TAG, "NativeHandler init failed");
                 return Errno.INIT_LIBRARY_FAILED;
@@ -310,7 +312,8 @@ class NativeHandler {
             int traceLogcatEventsLines,
             int traceLogcatMainLines,
             boolean traceDumpFds,
-            boolean traceDumpNetworkInfo);
+            boolean traceDumpNetworkInfo,
+            boolean traceUseHookMode);
 
     private static native void nativeNotifyJavaCrashed();
 

@@ -96,6 +96,7 @@ public class MyCustomApplication extends Application {
             .setAnrLogCountMax(10)
             .setAnrCallback(callback)
             .setAnrFastCallback(anrFastCallback)
+            .setAnrUseHookMode(true)
             .setPlaceholderCountMax(3)
             .setPlaceholderSizeKb(512)
 //          .setLogDir(getExternalFilesDir("xcrash").toString())

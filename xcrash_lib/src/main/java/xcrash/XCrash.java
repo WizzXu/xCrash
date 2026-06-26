@@ -186,6 +186,10 @@ public final class XCrash {
         //init native crash handler / ANR handler (API level >= 21)
         int r = Errno.OK;
         if (params.enableNativeCrashHandler || (params.enableAnrHandler && Build.VERSION.SDK_INT >= 21)) {
+            //resolve ANR capture strategy: null = auto (hook mode on API >= 30), otherwise use the explicit choice
+            boolean anrUseHookMode = (params.anrUseHookMode != null)
+                ? params.anrUseHookMode
+                : (Build.VERSION.SDK_INT >= 30);
             r = NativeHandler.getInstance().initialize(
                 ctx,
                 params.libLoader,
@@ -214,7 +218,8 @@ public final class XCrash {
                 params.anrDumpFds,
                 params.anrDumpNetworkInfo,
                 params.anrCallback,
-                params.anrFastCallback);
+                params.anrFastCallback,
+                anrUseHookMode);
         }
 
         //maintain tombstone and placeholder files in a background thread with some delay
@@ -719,6 +724,7 @@ public final class XCrash {
         boolean        anrDumpNetworkInfo   = true;
         ICrashCallback anrCallback          = null;
         ICrashCallback anrFastCallback      = null;
+        Boolean        anrUseHookMode       = null;
 
         /**
          * Enable the ANR capture feature. (Default: enable)
@@ -868,6 +874,34 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters setAnrFastCallback(ICrashCallback fastCallback) {
             this.anrFastCallback = fastCallback;
+            return this;
+        }
+
+        /**
+         * Set which ANR trace capture implementation to use. (Default: auto)
+         *
+         * <p>xCrash provides two ANR capture strategies (both only valid when Android API level &gt;= 21):
+         * <ul>
+         *   <li><b>Legacy mode</b>: install a SIGQUIT handler and call {@code Runtime::DumpForSigQuit},
+         *       redirecting its output via stderr. This reliably works up to Android 10 (API 29) but
+         *       <b>fails to capture the stack trace on Android 11+ (API 30+)</b>, because ART no longer
+         *       writes the dump to stderr (it goes through libartpalette to the tombstoned socket instead).</li>
+         *   <li><b>Hook mode</b> (Matrix-style): install a SIGQUIT handler, GOT-hook {@code write()}/
+         *       {@code writev()}/{@code __write_chk()} in the ART dump libraries to mirror the trace that
+         *       the in-process "Signal Catcher" thread writes, then re-raise SIGQUIT to it. This works on
+         *       Android 11/12/13/14/15/16.</li>
+         * </ul>
+         *
+         * <p>Pass {@code null} (the default) to let xCrash decide automatically: hook mode on API &gt;= 30,
+         * legacy mode below. Pass {@link Boolean#TRUE} to force hook mode, {@link Boolean#FALSE} to force
+         * legacy mode.
+         *
+         * @param useHookMode {@code null} = auto by API level, {@code true} = force hook mode, {@code false} = force legacy mode.
+         * @return The InitParameters object.
+         */
+        @SuppressWarnings("unused")
+        public InitParameters setAnrUseHookMode(Boolean useHookMode) {
+            this.anrUseHookMode = useHookMode;
             return this;
         }
     }

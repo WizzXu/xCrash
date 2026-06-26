@@ -35,6 +35,7 @@
 #include "xc_common.h"
 #include "xc_crash.h"
 #include "xc_trace.h"
+#include "xc_trace_hook.h"
 #include "xc_util.h"
 #include "xc_test.h"
 
@@ -74,7 +75,8 @@ static jint xc_jni_init(JNIEnv       *env,
                         jint          trace_logcat_events_lines,
                         jint          trace_logcat_main_lines,
                         jboolean      trace_dump_fds,
-                        jboolean      trace_dump_network_info)
+                        jboolean      trace_dump_network_info,
+                        jboolean      trace_use_hook_mode)
 {
     int              r_crash                                = XCC_ERRNO_JNI;
     int              r_trace                                = XCC_ERRNO_JNI;
@@ -178,13 +180,30 @@ static jint xc_jni_init(JNIEnv       *env,
     if(trace_enable)
     {
         //trace init
-        r_trace = xc_trace_init(env,
-                            trace_rethrow ? 1 : 0,
-                            (unsigned int)trace_logcat_system_lines,
-                            (unsigned int)trace_logcat_events_lines,
-                            (unsigned int)trace_logcat_main_lines,
-                            trace_dump_fds ? 1 : 0,
-                            trace_dump_network_info ? 1 : 0);
+        if(trace_use_hook_mode)
+        {
+            //Matrix-style: install SIGQUIT handler + GOT-hook write() to mirror
+            //ART's tombstoned trace. Works on Android 11+ where the legacy
+            //DumpForSigQuit-via-stderr approach fails.
+            r_trace = xc_trace_hook_init(env,
+                                trace_rethrow ? 1 : 0,
+                                (unsigned int)trace_logcat_system_lines,
+                                (unsigned int)trace_logcat_events_lines,
+                                (unsigned int)trace_logcat_main_lines,
+                                trace_dump_fds ? 1 : 0,
+                                trace_dump_network_info ? 1 : 0);
+        }
+        else
+        {
+            //Legacy: SIGQUIT handler + Runtime::DumpForSigQuit redirected via stderr.
+            r_trace = xc_trace_init(env,
+                                trace_rethrow ? 1 : 0,
+                                (unsigned int)trace_logcat_system_lines,
+                                (unsigned int)trace_logcat_events_lines,
+                                (unsigned int)trace_logcat_main_lines,
+                                trace_dump_fds ? 1 : 0,
+                                trace_dump_network_info ? 1 : 0);
+        }
     }
     
  clean:
@@ -261,6 +280,7 @@ static JNINativeMethod xc_jni_methods[] = {
         "I"
         "I"
         "I"
+        "Z"
         "Z"
         "Z"
         ")"
